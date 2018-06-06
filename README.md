@@ -1,10 +1,10 @@
 # Curlovision
-Curling computer vision project for extracting stone positions from broadcast footage.  The purpose is to build a data set of stone positions in high level curling matches, to be used in generating predictive models of the score or next stone positions.
+Curling computer vision project for extracting stone positions from broadcast game footage.  The purpose is to build a data set of stone positions in high level curling matches, to be used in generating predictive models of the score or next stone positions.
 
 ![Highlight Slide](curlovision_slide.png)
 
 # Dependencies
-Curlovision is written in Python (tested with v2.7) taking advantage of OpenCV, Matplotlib, Numpy, and Pytesseract.
+Curlovision is written in Python (tested with v2.7) taking advantage of the following dependencies:
 
   * OpenCV
   * Matplotlib
@@ -33,7 +33,7 @@ Curlovision is not perfect.  Testing suggests typical stone positions are accura
 
 There may not be a StoneLayout for every stone thrown, especially in cases where the broadcast footage does not provide a clean overhead view of the house after, e.g., inconsequential stones.  Often the very last stone thrown is not shown during broadcast if the outcome is already clear.
 
-Various levels of debugging can be enabled to during video processing to look at intermediate performance of process_video.
+Various levels of debugging can be enabled during process_video to examine the performance more closely.
 
 
 # Open Source
