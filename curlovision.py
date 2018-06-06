@@ -14,8 +14,8 @@ from matplotlib.collections import PatchCollection
 
 # TODO: Abstract out all match-specific parameters.
 
-# Processes a video, returns a MatchResult.
-def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['red_icon_Olympics2018.npy','yel_icon_Olympics2018.npy'],draw_key_frames=False, draw_test_frames=False, debug_12ft=False, debug_stones=False, debug_scoreboard=False):
+# Processes an entire video, returns a MatchResult.
+def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['stone_icons/red_icon_Olympics2018.npy','stone_icons/yel_icon_Olympics2018.npy'],draw_key_frames=False, draw_test_frames=False, debug_12ft=False, debug_stones=False, debug_scoreboard=False):
     # Load saved image templates for 'stones remaining' icons:
     # TODO: Check load success
     red_icon = np.load(icon_filenames[0])
@@ -120,8 +120,8 @@ def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['red_ico
             # Clear caches to prepare for the next stone
             stm.clear_caches()
 
-
-def stone_color_finder_rgb(cframe,stone,draw=False): # Defunct
+# Defunct stone color finder
+def stone_color_finder_rgb(cframe,stone,draw=False):
     x,y,r = stone[0], stone[1], stone[2]
     r = int(r*0.5)
     roi = cframe[y-r:y+r+1,x-r-1:x+r+1]
@@ -138,6 +138,7 @@ def stone_color_finder_rgb(cframe,stone,draw=False): # Defunct
     elif (rgb[0]>113 and rgb[1]>10 and rgb[2]>9): return 'red' # Red
     else: return None # invalid
 
+# Defunct stone color finder
 def stone_color_finder_hsv(cframe,stone,draw=False): # Defunct
     x,y,r = stone[0], stone[1], stone[2]
     h,w,_ = cframe.shape
@@ -182,6 +183,7 @@ def stone_color_finder_hsv(cframe,stone,draw=False): # Defunct
     if (mfrac > 0.10 and mfrac < 0.95): return color  # The image should be mostly the same color but not fully
     return None
 
+# Stone color finder.  Rejects false positives that are not sufficiently red or yellow.
 def stone_color_matcher(cframe,stone,draw=False):
     x,y,r = stone[0], stone[1], stone[2]
     h,w,_ = cframe.shape
@@ -244,7 +246,7 @@ def infer12ft(frame,draw=False):
     #print(p2,minR,maxR)
     return p2,minR,maxR
 
-
+# Used to identify 12ft ring in the house
 def find12ft(gframe,p2,minR,maxR,zy=0.0,zw=0.0,rec_count=0):
     rec_count += 1
     # Termination criteria, failure to find any rings:
@@ -275,6 +277,7 @@ def find12ft(gframe,p2,minR,maxR,zy=0.0,zw=0.0,rec_count=0):
         else:                    x,y,r = int(np.median(xs)), int(np.median(ys)), int(np.median(rs))
     return x,y,r
 
+# Used to identify all rings in the house besides the 12ft
 def find_smaller_rings(gframe,r_in,p2=50,rwin=10,rec_count=0):
     r_tol = 0.01
     rec_count += 1
@@ -304,7 +307,7 @@ def find_smaller_rings(gframe,r_in,p2=50,rwin=10,rec_count=0):
         else:                  x,y,r = int(np.median(xs)), int(np.median(ys)), int(np.median(rs))
     return x,y,r
 
-
+# Used to identify all stones in the frame with a Hough Transform, rejecting false positives that are not red or yellow
 def find_stones(gframe,cframe,r_in,p2=50,rwin=5,debug=False):
     r_tol = 0.005
     minR,maxR = int(r_in*(1-r_tol)-rwin-7),int(r_in*(1+r_tol)+rwin-1) 
@@ -332,6 +335,7 @@ def find_stones(gframe,cframe,r_in,p2=50,rwin=5,debug=False):
 
     return stones_ret
 
+# Uses template matching to count how many stones are remaining to be thrown in the end.  Needs pre-loaded icon templates.
 def read_stones_remaining_icons(cframe,dframe,icons,draw=False):
     if len(icons) != 2: print('ERROR: Expected a list of red and yellow icons')
     red_icon = icons[0]
@@ -385,6 +389,7 @@ def read_stones_remaining_icons(cframe,dframe,icons,draw=False):
         plt.show()
     return nred,nyel
 
+# Uses pytesseract to read the digits of the current end
 def read_current_end_text(cframe,dframe,draw=False):
     y1,y2,x1,x2 = 168,212,295,345 # Custom boundaries for Olympics2018
     roi = cframe[y1:y2,x1:x2]
@@ -406,6 +411,7 @@ def read_current_end_text(cframe,dframe,draw=False):
         plt.show()
     return current_end
 
+# Uses pytesseract to read the digits of the current score
 def read_current_score_text(cframe,dframe,draw=False):
     y1,y2,x1,x2 = 56,96,362,418 # Custom boundaries for Olympics2018
     roi1 = cframe[y1:y2,x1:x2]
@@ -444,6 +450,7 @@ def read_current_score_text(cframe,dframe,draw=False):
         plt.show()
     return current_score_red,current_score_yel
 
+# Reads the current end, scoreboard, and determines the number of stones left to be thrown in the end
 def analyze_game_status(cframe,dframe,icons,draw=True):
 
     current_end =                         read_current_end_text       (cframe,dframe,draw=draw)
@@ -453,6 +460,7 @@ def analyze_game_status(cframe,dframe,icons,draw=True):
     return ScoreboardState(current_end,current_score_red,current_score_yel,nred,nyel)
 
 
+# High-level flow for how to process important frames
 def process_frame(frame,icons=None,draw=False,saveas=None,debug_stones=False,debug_scoreboard=False):
     cframe = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     dframe = cframe.copy()
@@ -528,7 +536,7 @@ def process_frame(frame,icons=None,draw=False,saveas=None,debug_stones=False,deb
     # Reconstruct the 12ft based on this measurement:
     cv2.circle(dframe,(x2,y2),int(6/p2f),(255,255,255),3)
     
-    # Analyze reliability of frame by comparing 4ft and button:
+    # TODO: Analyze reliability of frame by comparing 4ft and button:
     #diff24 = math.sqrt(math.pow(x4-x2,2)+math.pow(y4-y2,2))
     #ratio24 = r2/float(r4)
     #print("{:.2f}".format(diff24))
@@ -572,6 +580,7 @@ def process_frame(frame,icons=None,draw=False,saveas=None,debug_stones=False,deb
     return StoneLayout(stones_ret),dframe,sbs
 
 
+# Basic stone data: position, size, and color
 class Stone:
     def __init__(self,x=0,y=0,r=0,color=None):
         self.x = float(x)
@@ -581,8 +590,8 @@ class Stone:
     def __str__(self):
         return "\t\t\t\t{:7}\t\t{:.2f}\t\t{:.2f}".format(self.color, self.x, self.y)
 
+# Positions of stones and game status.  Can calculate score of iteslf and draw itself.
 class StoneLayout:
-
     #def __init__(self,frame_num=0,stones=[]):
     def __init__(self,stones=[]):
         self.stone_radius = 11.5/12./2. # Fixed number in feet, based on 36-inch circumference in rules
@@ -676,7 +685,7 @@ class StoneLayout:
         plt.show()
 
 
-# Highest level game results
+# Highest level game results, containing information about each end
 class MatchResult:
     def __init__(self,name='Unknown'):
         self.name = name
@@ -742,8 +751,8 @@ class EndResult:
             print("Red left: {}, Yel left: {}\n  {}\n".format(entry[0][0], entry[0][1], entry[1]))
             entry[1].draw()
 
-
-class ScoreboardState: # a struct to hold: current_end,current_score_red,current_score_yel,n_red_left,n_yel_left
+# Basic container to hold game status data: current_end,current_score_red,current_score_yel,n_red_left,n_yel_left
+class ScoreboardState:
     def __init__(self,current_end=-1,current_score_red=-1,current_score_yel=-1,n_red_left=-1,n_yel_left=-1):
         self.current_end = int(current_end)
         self.current_score_red = int(current_score_red)
@@ -767,7 +776,7 @@ class ScoreboardState: # a struct to hold: current_end,current_score_red,current
               self.n_yel_left)
         
 
-# Keeps a record of the last few frames, used to determine key frames and game flow.
+# Keeps a record of the last few frames, used to determine key frames and game flow
 class ShortTermMemory:
     def __init__(self,cache_size=15):
         self.verbose = True
