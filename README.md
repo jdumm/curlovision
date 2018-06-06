@@ -6,10 +6,10 @@ Curling computer vision project for extracting stone positions from broadcast fo
 # Dependencies
 Curlovision is written in Python (tested with v2.7) taking advantage of OpenCV, Matplotlib, Numpy, and Pytesseract.
 
-OpenCV
-Matplotlib
-Numpy
-Pytesseract
+  * OpenCV
+  * Matplotlib
+  * Numpy
+  * Pytesseract
 
 
 # Usage
@@ -23,6 +23,9 @@ Main functions/classes can be imported from 'curlovision.py'.
   * cvis.process_video function returns a custom MatchResult object that contains the results from each end of the match.  Each EndResult contains the stone positions in feet after each stone is thrown.  The number of stones remaining to be thrown by red and yellow teams are also recorded, along with the team that has the hammer (last stone in the end).
   * As a starting place, MatchResults know how to .draw() themselves.
 
+'Visualize.ipynb' is an example for parsing and visualizing the MatchResults.  It was used to generate the example heatmap image:
+
+![Example Heatmap](Example_heatmap.png)
 
 # Common Failures
 
