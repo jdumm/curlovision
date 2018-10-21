@@ -23,9 +23,13 @@ Main functions/classes can be imported from 'curlovision.py'.
   * cvis.process_video function returns a custom MatchResult object that contains the results from each end of the match.  Each EndResult contains the stone positions in feet after each stone is thrown.  The number of stones remaining to be thrown by red and yellow teams are also recorded, along with the team that has the hammer (last stone in the end).
   * As a starting place, MatchResults know how to .draw() themselves.
 
-'Visualize.ipynb' is an example for parsing and visualizing the MatchResults.  It was used to generate the example heatmap image:
+'Basic Visualize Examples.ipynb' is an example for parsing and visualizing the MatchResults.  It was used to generate the example heatmap image:
 
 ![Example Heatmap](Example_heatmap.png)
+
+'Free Guard Analysis.ipynb' is a more sophisticated case for analyzing the match outcomes based on the first 4 stones.  
+
+'Video Debug.ipynb' can be used to visualize and fix all the subprocesses in video processing.
 
 # Common Failures
 
