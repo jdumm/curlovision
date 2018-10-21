@@ -556,7 +556,11 @@ def process_frame(frame,icons=None,draw=False,saveas=None,debug_stones=False,deb
         # draw the center of the circle
         cv2.circle(dframe,(int(stone[0]),int(stone[1])),3,stone_rgb,5)
         #print('\t\t\t{}\t{}'.format(stone[0] ,stone[1]))
-        # Convert stone positions from pixels to ft:
+
+        # Convert stone positions from pixels to ft and filter stones outside a reasonable boundary:
+        x =  p2f*(int(stone[0])-x2)
+        y = -p2f*(int(stone[1])-y2)
+        if x<-7 or x>7 or y<-8 or y>20: continue   # Hardcoded acceptable bounds of the field of play
         stones_ret.append(Stone(p2f*(int(stone[0])-x2), -p2f*(int(stone[1])-y2), p2f*int(stone[2]), stone[3]))
         if draw==True: print('\t\t{} \t{:.2f}\t{:.2f}'.format(stone[3],float(stone[0])-x2,float(stone[1])-y2))
 
@@ -592,7 +596,6 @@ class Stone:
 
 # Positions of stones and game status.  Can calculate score of iteslf and draw itself.
 class StoneLayout:
-    #def __init__(self,frame_num=0,stones=[]):
     def __init__(self,stones=[]):
         self.stone_radius = 11.5/12./2. # Fixed number in feet, based on 36-inch circumference in rules
         self.stones = stones
@@ -688,7 +691,9 @@ class StoneLayout:
 # Highest level game results, containing information about each end
 class MatchResult:
     def __init__(self,name='Unknown'):
-        self.name = name
+        self.version = 20180812  # YYYYMMDD - Update when results on the same video or interface change
+        self.name = name # Name of video file
+        self.metadata = MatchMetadata()
         self.end_results = []
         self.red_score = -1
         self.yel_score = -1
@@ -711,7 +716,20 @@ class MatchResult:
         print("Final Red Score {}, Yel Score {}\n".format(self.red_score,self.yel_score))
         for end in self.end_results:
             end.draw()
-        
+
+# Used to store meta data concerning the matchup, like who is playing and when 
+class MatchMetadata:
+    def __init__(self, date='Unknown', red_name='Unknown', yel_name='Unknown',
+                 event_name='Unknown', gender='Unknown', other='Unknown'):
+        self.date             = date  # Date that the match took place in YYYYMMDD format
+        self.team_name_red    = red_name
+        self.team_name_yel    = yel_name
+        self.event_name       = event_name  # E.g. Pyeong Change Olympics
+        self.gender           = gender  # Men's, Women's, or Mixed
+        self.other_info       = other  # E.g. "Best gold medal match in history!"
+
+    #def set_by_hand(self):
+
 
 # Stores all stone positions throughout an end and scores read from the scoreboard after the end is over
 class EndResult:
@@ -719,7 +737,6 @@ class EndResult:
         self.end_num = end_num 
         self.red_score = red_score
         self.yel_score = yel_score
-        #self.stone_layouts = [] # One layout for each stone thrown
         self.stone_layouts = [] # One layout for each stone thrown
         self.stones_left = []   # One layout for each stone thrown, a tuple of (n_red_left, n_yel_left)
         self.red_hammer = -1 # -1 if not known yet, 0 if yellow has the last rock, 1 if red has the last rock
@@ -829,4 +846,37 @@ class ShortTermMemory:
             ret+="{}\n".format(state)
             ret+="{}\n".format(layout)
         return ret
+
+
+# Draw the house, set the height in pixels and everything scales to that.  Height represents 30 ft in real world.
+# Returns patches list and the feet-to-pixel conversion factor, and pixel coordinate for the house center.
+def draw_house(height=1500):
+    h=height # height in pixels that matches 30 ft in real world, everything scales to this
+    w=int(h*14./30.)  # width represents 14 ft in the real world
+    ft2px = h/30.
+
+    patches = []
+    # Draw House
+    xc = int(w/2.)-1
+    yc = int(h*22./30.)-1
+    r12 = int(w*12./14./2.) # 12-ft
+    r8 = int(r12*8./12.)    # 8-ft
+    r4 = int(r12*4./12.)    # 4-ft
+    rb = int(r12*1.3/12.)   # Button
+    patches.append(Circle((xc, yc), r12 ,color='skyblue'))
+    patches.append(Circle((xc, yc), r8 ,color='white'))
+    patches.append(Circle((xc, yc), r4 ,color='red'))
+    patches.append(Circle((xc, yc), rb ,color='white'))
+
+    # Draw lines
+    tl = Rectangle((0,yc),w,1,color='black')              # T-line
+    bl = Rectangle((0,int(h-h*2./30.)),w,1,color='black') # Back line
+    hl = Rectangle((0,int(h*2./30.)),w,1,color='black')   # Hog line
+    cl = Rectangle((xc,0),1,h,color='black')              # Center line
+    patches.append(tl)
+    patches.append(bl)
+    patches.append(hl)
+    patches.append(cl)
+    
+    return patches,ft2px,xc,yc
 
