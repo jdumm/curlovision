@@ -15,42 +15,78 @@ from matplotlib.collections import PatchCollection
 # TODO: Abstract out all match-specific parameters.
 
 # Processes an entire video, returns a MatchResult.
-def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['stone_icons/red_icon_Olympics2018.npy','stone_icons/yel_icon_Olympics2018.npy'],draw_key_frames=False, draw_test_frames=False, debug_12ft=False, debug_stones=False, debug_scoreboard=False):
+def process_video(vid_filename,
+                 frame_start=0,          # Pass over first frame_start frames.
+                 nskip=5,                # Read only every nskip frames
+                 icon_filenames=['stone_icons/red_icon_Olympics2018.npy','stone_icons/yel_icon_Olympics2018.npy'],
+                 draw_key_frames=False,
+                 draw_test_frames=False,
+                 debug_12ft=False,
+                 debug_stones=False,
+                 debug_scoreboard=False,
+                 use_cached_key_frames=False,
+                 prev_run_match_result=None):
+
     # Load saved image templates for 'stones remaining' icons:
-    # TODO: Check load success
-    red_icon = np.load(icon_filenames[0])
-    yel_icon = np.load(icon_filenames[1])
+    try: 
+        red_icon = np.load(icon_filenames[0])
+    except:
+        print('Error reading icon file: {}'.format(icon_filenames[0]))
+        return None
+    try: 
+        yel_icon = np.load(icon_filenames[1])
+    except:
+        print('Error reading icon file: {}'.format(icon_filenames[1]))
+        return None
+
+    if use_cached_key_frames:
+        print('Processing only key frames from cache:',prev_run_match_result.key_frame_cache)
+        if str(prev_run_match_result.version) < '20181111' or len(prev_run_match_result.key_frame_cache)==0:
+            print('No cached frames available... Aborting!')
+            return None
 
     cap = cv2.VideoCapture(vid_filename)
 
-    fcount=frame_start
-    cap.set(1,frame_start)
-    nskip = 5
+    fcount = frame_start
+    #cap.set(1,frame_start)  # This gives inconsistent results... maybe because of dropped frames?
+    for i in range(frame_start):  # Can be slow for very long videos but gives consistent results
+        ret, frame = cap.read()
     match_result = MatchResult(vid_filename)
     stm = ShortTermMemory(15)
     stm.verbose = False
 
-    stm.frame_cache  = deque(maxlen=15)
-    stm.layout_cache = deque(maxlen=15)
-    stm.sbs_cache    = deque(maxlen=15)
-
     vid_end_found = False
-    while(cap.isOpened()):
-        for i in range(nskip):
-            ret, frame = cap.read()
-            #if not ret: break # Corrupt frame or end of file
-            if not ret:
+    key_frame_index = 0
+    while(cap.isOpened()):   # Main loop over the video file
+        if use_cached_key_frames:
+            if key_frame_index >= len(prev_run_match_result.key_frame_cache):
                 vid_end_found = True
-                break # Corrupt frame or end of file
-            fcount += 1
+            else:
+                while fcount < prev_run_match_result.key_frame_cache[key_frame_index]:
+                    ret, frame = cap.read()
+                    #if not ret: break # Corrupt frame or end of file
+                    if not ret:
+                        vid_end_found = True
+                        break # Corrupt frame or end of file
+                    fcount += 1
+            key_frame_index+=1
+        else:
+            for i in range(nskip):
+                ret, frame = cap.read()
+                #if not ret: break # Corrupt frame or end of file
+                if not ret:
+                    vid_end_found = True
+                    break # Corrupt frame or end of file
+                fcount += 1
 
         if vid_end_found: 
-            # Package last EndResult and return the MatchResult
+            # Package up last EndResult and return the MatchResult, we're done!
             match_result.add_end_result(deepcopy(stm.current_end_result))  # Store a copy
             return match_result
     
         # For monitoring where we are in the video:
         if draw_test_frames and fcount%900 == 0: # print test frame every so often (900=1min @ 15fps)
+        #if draw_test_frames and fcount%1 == 0: # print test frame every so often (900=1min @ 15fps)
             print("Test frame: {}".format(fcount))
             plt.figure(figsize=(10,10))
             plt.imshow(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -59,14 +95,16 @@ def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['stone_i
         p2,minR,maxR = infer12ft(frame,draw=debug_12ft)
         if (p2,minR,maxR) != (0,0,0): # Valid 12ft inferred.  Begin collecting frame sequence.
             stm.frame_cache.append(frame)
-        elif len(stm.frame_cache) >= 3: # threshold of 3 indicates persistent overhead camera view of the house
+        # Threshold of 3 indicates persistent overhead camera view of the house or we already know the key frames
+        if ((p2,minR,maxR) == (0,0,0) and len(stm.frame_cache) >= 3) or use_cached_key_frames:
+        #elif len(stm.frame_cache) >= 3 or use_cached_key_frames:
             #print('Processing frame_cache of size {}'.format(len(stm.frame_cache)))
             for frame in stm.frame_cache:
                 layout,dframe,sbstate = process_frame(frame,icons=(red_icon,yel_icon),draw=False,debug_stones=debug_stones,debug_scoreboard=debug_scoreboard)
                 if layout is None or sbstate is None or sbstate.current_end < stm.end_prev: # skip invalid frames and replays
                     continue
 
-                # First check if the end number has changed, in which case return the EndResult.
+                # First check if the end number has changed, in which case return the previous EndResult.
                 if(sbstate.current_end>0 and sbstate.current_end<=20 and # Just some sanity checks
                    sbstate.current_end > stm.end_prev): # A new end! Package and return the last one.
 
@@ -90,12 +128,15 @@ def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['stone_i
             # Now that the cache is processed, find the best layout, hammer, and stones left
             ibest = stm.find_best_layout()
             if ibest>=0: # Valid best-frame of cache found:
-                key_frame = fcount-(len(stm.frame_cache)-ibest)*nskip # TODO: Cache key frames for fast reprocessing
+                key_frame = fcount-(len(stm.frame_cache)-ibest)*nskip
+                key_frame = key_frame+5 if use_cached_key_frames else key_frame # Adjust for caching logic
+
                 if draw_key_frames:
                     print('key frame: {}'.format(key_frame))
                     plt.figure(figsize=(15,15))
                     plt.imshow( stm.dframe_cache[ibest] )
                     plt.show()
+
                 n_red,n_yel = stm.find_nstones_stats()
                 #if stm.verbose: print("{} {} {} {}".format(n_red,n_yel,stm.n_red_prev,stm.n_yel_prev))
                 if stm.current_end_result.red_hammer == -1: # If it's unset yet, check if we have enough info to do so now
@@ -104,11 +145,14 @@ def process_video(vid_filename, frame_start=0, nskip=5, icon_filenames=['stone_i
 
                 # If stones left are the same as before, we can replace the previous layout.
                 #  E.g. the camera panned away, perhaps during a timeout, then came back to the same top-down view.
-                if n_red >= stm.n_red_prev and n_yel >= stm.n_yel_prev:
+                if (n_red >= stm.n_red_prev and n_yel >= stm.n_yel_prev) and not use_cached_key_frames:
+                    if draw_key_frames: print('Duplicate rock view, retracting above key frame.')
                     #if stm.verbose: print('Duplicate frame for same stone, updating layout...')
                     # Replace last layout:
                     stm.current_end_result.stone_layouts[-1] = stm.layout_cache[ibest]
+                    match_result.key_frame_cache[-1] = key_frame
                 else:
+                    match_result.key_frame_cache.append(key_frame)
                     stm.current_end_result.add_stone_layout(stm.layout_cache[ibest])
                     stm.current_end_result.add_stones_left(n_red,n_yel)
                     stm.n_red_prev,stm.n_yel_prev = n_red,n_yel
@@ -363,12 +407,12 @@ def read_stones_remaining_icons(cframe,dframe,icons,draw=False):
     red_difs = np.ediff1d(red_locs, to_begin=999)
     red_difs = np.where(red_difs>20)  # Require 20 pix separation
     if red_thresh < 0.80: nred=0
-    else: nred = len(zip(*red_difs[::-1]))
+    else: nred = len(list(zip(*red_difs[::-1])))
     yel_locs = np.sort(np.array(yel_loc[1]))
     yel_difs = np.ediff1d(yel_locs, to_begin=999)
     yel_difs = np.where(yel_difs>20)  # Require 20 pix separation
     if yel_thresh < 0.80: nyel=0
-    else: nyel = len(zip(*yel_difs[::-1]))
+    else: nyel = len(list(zip(*yel_difs[::-1])))
     #print(yel_res[red_loc])
     #print(yel_res[yel_loc])
     # Draw squares over the icons:
@@ -681,7 +725,7 @@ class StoneLayout:
 
         # Display everything
         fig = plt.figure(figsize=(h/100.,w/100.))
-        img = np.ones((h,w,3),dtype=int)
+        img = np.ones((h,w,3),dtype=float)
         plt.imshow(img)
         for patch in patches:
             fig.gca().add_patch(patch)
@@ -691,8 +735,9 @@ class StoneLayout:
 # Highest level game results, containing information about each end
 class MatchResult:
     def __init__(self,name='Unknown'):
-        self.version = 20180812  # YYYYMMDD - Update when results on the same video or interface change
+        self.version = '20181111'  # YYYYMMDD - Update when results on the same video or interface change
         self.name = name # Name of video file
+        self.key_frame_cache = [] # Cache of key frames. Can be used for fast reprocessing
         self.metadata = MatchMetadata()
         self.end_results = []
         self.red_score = -1
@@ -721,14 +766,12 @@ class MatchResult:
 class MatchMetadata:
     def __init__(self, date='Unknown', red_name='Unknown', yel_name='Unknown',
                  event_name='Unknown', gender='Unknown', other='Unknown'):
-        self.date             = date  # Date that the match took place in YYYYMMDD format
-        self.team_name_red    = red_name
-        self.team_name_yel    = yel_name
+        self.date             = date        # Date that the match took place in YYYYMMDD format
+        self.team_name_red    = red_name    # Name of the team throwing red stones
+        self.team_name_yel    = yel_name    # Name of the team throwing yellow stones
         self.event_name       = event_name  # E.g. Pyeong Change Olympics
-        self.gender           = gender  # Men's, Women's, or Mixed
-        self.other_info       = other  # E.g. "Best gold medal match in history!"
-
-    #def set_by_hand(self):
+        self.gender           = gender      # Men's, Women's, or Mixed
+        self.other_info       = other       # E.g. "Best gold medal match in history!"
 
 
 # Stores all stone positions throughout an end and scores read from the scoreboard after the end is over
@@ -797,11 +840,10 @@ class ScoreboardState:
 class ShortTermMemory:
     def __init__(self,cache_size=15):
         self.verbose = True
-        self.max_lookback = cache_size
-        self.frame_cache   = deque(maxlen=self.max_lookback)
-        self.dframe_cache  = deque(maxlen=self.max_lookback)
-        self.layout_cache  = deque(maxlen=self.max_lookback)
-        self.sbstate_cache = deque(maxlen=self.max_lookback)
+        self.frame_cache   = deque(maxlen=cache_size)
+        self.dframe_cache  = deque(maxlen=cache_size)
+        self.layout_cache  = deque(maxlen=cache_size)
+        self.sbstate_cache = deque(maxlen=cache_size)
 
         self.current_end_result = EndResult()  # This gets filled in with information as it comes
         self.end_prev = 1
@@ -818,7 +860,7 @@ class ShortTermMemory:
     # Stones can 'go missing' due to e.g. shadows or players walking and obstructing the view.
     # Use the last frame with all the stones because the stones could still be moving otherwise.
     # Returns an index of the best frame in the cache.
-    def find_best_layout(self):
+    def find_best_layout(self):  # TODO: Identify and reject stones that are still in motion.
         if self.layout_cache is None or self.layout_cache == []: return -1 # empty layouts
         imax,nstone_max = -1,0
         for i,layout in enumerate(self.layout_cache):
@@ -835,6 +877,7 @@ class ShortTermMemory:
     def find_nstones_stats(self):
         n_red_min,n_yel_min = 9,9
         for sbs in self.sbstate_cache:
+            #print('Scoreboard cache results',sbs.n_red_left, sbs.n_yel_left)
             if sbs.n_red_left < n_red_min: n_red_min = sbs.n_red_left
             if sbs.n_yel_left < n_yel_min: n_yel_min = sbs.n_yel_left
         return n_red_min,n_yel_min

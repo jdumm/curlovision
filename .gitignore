@@ -3,3 +3,5 @@
 *.swp
 VideoLibrary/*.mp4
 *.pyc
+*.bak/*
+*.back/*

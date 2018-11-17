@@ -33,7 +33,7 @@ Main functions/classes can be imported from 'curlovision.py'.
 
 # Common Failures
 
-Curlovision is not perfect.  Testing suggests typical stone positions are accurate to within 2 or 3 inches.  Perhaps 1 or 2% of StoneLayouts are off by ~10%, due to players/stones obstructing too much of the house and ruining the measurement metrics.  There are occassionaly false positive stones (e.g. matching a round head with a red hat).  Stones with ~20% occlusion from players and brooms can be overlooked.  
+Curlovision is not perfect.  Testing suggests typical stone positions are accurate to within 2 or 3 inches.  Perhaps 1 or 2% of StoneLayouts are off by ~10%, due to players/stones obstructing too much of the house and ruining the measurement metrics.  There are occassionaly false positive stones (e.g. matching a round head with a red hat).  Also, sometimes stones on the edge of the house can still be in motion, on their way completely out as the camera view changes.  Stones with ~20% occlusion from players and brooms can be overlooked.  
 
 There may not be a StoneLayout for every stone thrown, especially in cases where the broadcast footage does not provide a clean overhead view of the house after, e.g., inconsequential stones.  Often the very last stone thrown is not shown during broadcast if the outcome is already clear.
 
