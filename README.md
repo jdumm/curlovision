@@ -14,14 +14,14 @@ Curlovision is written in Python (tested with v3.6) taking advantage of the foll
 
 # Usage
 
-Main functions/classes can be imported from 'curlovision.py'.
+Main functions/classes can be imported from 'curlovision.py'.  Example files below are Jupyter Notebooks.
 
 'ProcessBatch.ipynb' is an example for processing video broadcasts of curling matches.
   * Video files must be in mp4 format, 1 match per file.
   * Video assumed to have 15 fps with resolution 1920x1080.  Higher framerates can be processed efficiently with higher nskip values.
   * Every 5th frame (default) is searched for the blue ice of the 12ft ring in the house.  When found, a ShortTermMemory starts collecting frames until the blue ice disappears.  Key frames are identified and processed, generally much faster than a video would play.  Hough Transforms are used to quickly find rings of the house and stones.  The scoreboard and games status are read and recorded using pytesseract and OpenCV template matching.  
-  * cvis.process_video function returns a custom MatchResult object that contains the results from each end of the match.  Each EndResult contains the stone positions in feet after each stone is thrown.  The number of stones remaining to be thrown by red and yellow teams are also recorded, along with the team that has the hammer (last stone in the end).
-  * As a starting place, MatchResults know how to .draw() themselves.
+  * The process_video function returns a custom MatchResult object that contains the results from each end of the match.  Each EndResult contains the stone positions in feet after each stone is thrown.  The number of stones remaining to be thrown by red and yellow teams are also recorded, along with the team that has the hammer (last stone in the end).
+  * MatchResults know how to .draw() themselves.
 
 'BasicVisualizeExamples.ipynb' is an example for parsing and visualizing the MatchResults.  It was used to generate the example heatmap image on the left:
 
@@ -31,6 +31,14 @@ Main functions/classes can be imported from 'curlovision.py'.
 'FreeGuardAnalysis.ipynb' is a more sophisticated case for analyzing the match outcomes based on the first 4 stones and generated the heatmap above on the right.
 
 'VideoDebugSandbox.ipynb' can be used to visualize and fix all the subprocesses in video processing.
+
+# TODO Wishlist
+
+Here are the next steps I would like to take, roughly in order of priority:
+  * Abstract out all tournament-specific parameters to make them easily configurable: Scoreboard location, stone icons, house and stone color space.
+  * Provide a ProcessFrame.ipynb example notebook to illustrate how to handle a single key frame.
+  * Track down and fix scoreboard reading errors (2 known).
+  * Explore ways to import/process matches available on Youtube.
 
 # Common Failures
 
