@@ -305,9 +305,9 @@ def find12ft(gframe,p2,minR,maxR,zy=0.0,zw=0.0,rec_count=0):
     #print("nTwelves: " ,len(twelves[0,:]))
     #print("Twelves: " ,twelves[0,:])
     if twelves is None: # lower noise threshold, change ring size, change zoom
-        return find12ft(gframe,p2-5,minR-20,maxR+20)    
+        return find12ft(gframe,p2-5,minR-20,maxR+20,zy,zw,rec_count)
     elif len(twelves[0,:])>5: # tighten criteria
-        return find12ft(gframe,p2+2,minR+2,maxR-1)
+        return find12ft(gframe,p2+2,minR+2,maxR-1,zy,zw,rec_count)
     else: # Find best 12-ft ring
         x,y,r = 0,0,0
         twelves = np.uint16(np.around(twelves))
@@ -389,9 +389,9 @@ def read_stones_remaining_icons(cframe,dframe,icons,draw=False):
     #h,w,_ = yel_icon.shape
     #yel_icon = yel_icon[int(h*0.10):int(h*0.90),:]
     h,w,_ = cframe.shape
-    red_roi =  cframe[int(0.05*h):int(0.10*h),int(0.22*w):int(0.49*w)]  # Just examine upper left corner
+    red_roi  = cframe[int(0.05*h):int(0.10*h),int(0.22*w):int(0.49*w)]  # Just examine upper left corner
     red_droi = dframe[int(0.05*h):int(0.10*h),int(0.22*w):int(0.49*w)]  # Same region for draw frame
-    yel_roi =  cframe[int(0.10*h):int(0.15*h),int(0.22*w):int(0.49*w)]  # Just examine upper left corner
+    yel_roi  = cframe[int(0.10*h):int(0.15*h),int(0.22*w):int(0.49*w)]  # Just examine upper left corner
     yel_droi = dframe[int(0.10*h):int(0.15*h),int(0.22*w):int(0.49*w)]  # Same region for draw frame
     red_res = cv2.matchTemplate(red_roi,red_icon,cv2.TM_CCOEFF_NORMED)
     red_thresh = np.max(red_res)-0.03 # Dynamic threshold, within 1.5% of the peak template match result
@@ -558,7 +558,7 @@ def process_frame(frame,icons=None,draw=False,saveas=None,debug_stones=False,deb
     cv2.circle(dframe,(x4,y4),r4,(255,0,0),10)
     cv2.circle(dframe,(x4,y4),2,(255,0,0),5)    
 
-    # The button is a little less than 1/2 as big as the 4 ft in Korea
+    # The button is a little less than 1/2 as big as the 4 ft in Olympics 2018
     zframe = gframe[y4-r4:y4+r4,x4-r4:x4+r4]
     x2,y2,r2 = find_smaller_rings(zframe,r4*1./2.,p2=40)
     if (x2,y2,r2)==(0,0,0):
@@ -638,7 +638,7 @@ class Stone:
     def __str__(self):
         return "\t\t\t\t{:7}\t\t{:.2f}\t\t{:.2f}".format(self.color, self.x, self.y)
 
-# Positions of stones and game status.  Can calculate score of iteslf and draw itself.
+# Positions of stones and game status.  Can calculate score of itself and draw itself.
 class StoneLayout:
     def __init__(self,stones=[]):
         self.stone_radius = 11.5/12./2. # Fixed number in feet, based on 36-inch circumference in rules
