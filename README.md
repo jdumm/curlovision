@@ -1,7 +1,7 @@
 # Curlovision
 Curling computer vision project for extracting stone positions from broadcast game footage.  The purpose is to build a data set of stone positions in high level curling matches, to be used in generating predictive models of the score or next stone positions.
 
-![Highlight Slide](curlovision_slide.png)
+![Highlight Slide](example_images/curlovision_slide.png)
 
 # Requirements
 Curlovision is written in Python (tested with v3.6) taking advantage of the following dependencies:
@@ -28,8 +28,8 @@ Main functions/classes can be imported from 'curlovision.py'.  Example files bel
 
 'BasicVisualizeExamples.ipynb' is an example for parsing and visualizing the MatchResults.  It was used to generate the example heatmap image on the left:
 
-![Example Heatmap](ExampleHeatmapImage.png)
-![Example Guard Heatmap](ExampleFreeGuardImage.png)
+![Example Heatmap](example_images/ExampleHeatmapImage.png)
+![Example Guard Heatmap](example_images/ExampleFreeGuardImage.png)
 
 'FreeGuardAnalysis.ipynb' is a more sophisticated case for analyzing the match outcomes based on the first 4 stones and generated the heatmap above on the right.
 
