@@ -1,0 +1,10 @@
+Curlovision is written in Python (tested with v3.6) taking advantage of the following dependencies:
+
+  * OpenCV
+  * Numpy
+  * Pytesseract
+  * Jupyter
+  * Matplotlib
+
+There is a docker available with instructions and all required dependencies, available thanks to [zbassett](https://github.com/zbassett) at the following link:
+[https://github.com/zbassett/jupyterlab_opencv](https://github.com/zbassett/jupyterlab_opencv)

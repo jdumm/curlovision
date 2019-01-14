@@ -18,7 +18,7 @@ from matplotlib.collections import PatchCollection
 def process_video(vid_filename,
                  frame_start=0,          # Pass over first frame_start frames.
                  nskip=5,                # Read only every nskip frames
-                 icon_filenames=['stone_icons/red_icon_Olympics2018.npy','stone_icons/yel_icon_Olympics2018.npy'],
+                 icon_filenames=['../data/stone_icons/red_icon_Olympics2018.npy','../data/stone_icons/yel_icon_Olympics2018.npy'],
                  draw_key_frames=False,
                  draw_test_frames=False,
                  debug_12ft=False,
@@ -46,6 +46,9 @@ def process_video(vid_filename,
             return None
 
     cap = cv2.VideoCapture(vid_filename)
+    if(not cap.isOpened()):
+        print('Error: Video file does not exist or is empty.  Aborting!')
+        return None
 
     fcount = frame_start
     #cap.set(1,frame_start)  # This gives inconsistent results... maybe because of dropped frames?
@@ -248,7 +251,7 @@ def stone_color_matcher(cframe,stone,draw=False):
     color = None
     if frac_red>0.23 and frac_red<0.90: color = 'red'
     if frac_yel>0.23 and frac_yel<0.90: color = 'yellow'
-    if draw: print('Red Frac: {:.3f}, Yel Frac: {:.3f}:   Color: {}'.format(frac_red, frac_yel,color))
+    if draw: print('stone_color_matcher -- Red Frac: {:.3f}, Yel Frac: {:.3f}:   Color: {}'.format(frac_red, frac_yel,color))
     return color
 
 # Check BGR -> RGB frame for how much is blue.  First step in deciding to process the frame further
@@ -374,8 +377,8 @@ def find_stones(gframe,cframe,r_in,p2=50,rwin=5,debug=False):
             stones_ret = np.append(stones_ret,[[stone[0],stone[1],stone[2],color]],axis=0)
             #print('\t\t{} \t{:.2f}\t{:.2f}'.format(color,(stone[0]-x)*p2f ,-p2f*(stone[1]-y)))
     if debug:
-        print("Rin,MinR,MaxR: {}, {}, {}".format(r_in,minR,maxR))
-        print(stones_ret)
+        print("find_stones -- Rin,MinR,MaxR: {}, {}, {}".format(r_in,minR,maxR))
+        print("find_stones -- ",stones_ret)
 
     return stones_ret
 
@@ -449,7 +452,7 @@ def read_current_end_text(cframe,dframe,draw=False):
     h,w,_ = roi.shape
     cv2.putText(dframe,str(current_end),(297,245), font, 1.4,(255,255,0),2,cv2.LINE_AA)
     if draw:
-        print(text,current_end)
+        print('read_current_end_text -- ',text,current_end)
         plt.figure()
         plt.imshow(roi)
         plt.show()
@@ -484,14 +487,14 @@ def read_current_score_text(cframe,dframe,draw=False):
     cv2.putText(dframe,str(current_score_red),(370,44 ), font, 1.6,(255,0,0),2,cv2.LINE_AA)
     cv2.putText(dframe,str(current_score_yel),(370,193), font, 1.6,(255,255,0),2,cv2.LINE_AA)
     if draw==True:
-        print(text1,current_score_red)
         plt.figure()
         plt.imshow(roi1)
         plt.show()
-        print(text2,current_score_yel)
+        print('read_current_score_text -- Red:',text1,current_score_red)
         plt.figure()
         plt.imshow(roi2)
         plt.show()
+        print('read_current_score_text -- Yel:',text2,current_score_yel)
     return current_score_red,current_score_yel
 
 # Reads the current end, scoreboard, and determines the number of stones left to be thrown in the end
@@ -635,8 +638,22 @@ class Stone:
         self.y = float(y)
         self.r = float(r)
         self.color = str(color)
+
     def __str__(self):
         return "\t\t\t\t{:7}\t\t{:.2f}\t\t{:.2f}".format(self.color, self.x, self.y)
+
+    def __eq__(self,other):
+        if(self.x == other.x and
+           self.y == other.y and
+           self.r == other.r and
+           self.color == other.color):
+            return True
+        else:
+            print('   |-x:',    self.x == other.x)
+            print('   |-y:',    self.y == other.y)
+            print('   |-r:',    self.r == other.r)
+            print('   |-color:',self.color == other.color)
+            return False
 
 # Positions of stones and game status.  Can calculate score of itself and draw itself.
 class StoneLayout:
@@ -731,6 +748,14 @@ class StoneLayout:
             fig.gca().add_patch(patch)
         plt.show()
 
+    def __eq__(self,other):
+        if(self.stone_radius == other.stone_radius and
+           self.stones       == other.stones):
+            return True
+        else:
+            print('  |-stone_radius:',self.stone_radius == other.stone_radius)
+            return False
+
 
 # Highest level game results, containing information about each end
 class MatchResult:
@@ -762,6 +787,19 @@ class MatchResult:
         for end in self.end_results:
             end.draw()
 
+    def __eq__(self,other):
+		# Require a match for everything but video filename and version member
+        if(self.key_frame_cache == other.key_frame_cache and
+           self.metadata == other.metadata and
+           self.end_results == other.end_results and
+           self.red_score == other.red_score and
+           self.yel_score == other.yel_score):
+            return True 
+        else: 
+            print('-key_frame_cache:',self.key_frame_cache == other.key_frame_cache)
+            print('-red_score:',self.red_score == other.red_score)
+            print('-yel_score:',self.yel_score == other.yel_score)
+            return False
 # Used to store meta data concerning the matchup, like who is playing and when 
 class MatchMetadata:
     def __init__(self, date='Unknown', red_name='Unknown', yel_name='Unknown',
@@ -772,6 +810,24 @@ class MatchMetadata:
         self.event_name       = event_name  # E.g. Pyeong Change Olympics
         self.gender           = gender      # Men's, Women's, or Mixed
         self.other_info       = other       # E.g. "Best gold medal match in history!"
+
+    def __eq__(self,other):
+        if(self.date             == other.date and
+           self.team_name_red    == other.team_name_red and
+           self.team_name_yel    == other.team_name_yel and
+           self.event_name       == other.event_name and
+           self.gender           == other.gender and
+           self.other_info       == other.other_info):
+            return True
+        else:
+            print('|-date',          self.date             == other.date)
+            print('|-team_name_red:',self.team_name_red    == other.team_name_red)
+            print('|-team_name_yel:',self.team_name_yel    == other.team_name_yel)
+            print('|-event_name',    self.event_name       == other.event_name)
+            print('|-gender',        self.gender           == other.gender)
+            print('|-other_info:',   self.other_info       == other.other_info)
+            return False
+        
 
 
 # Stores all stone positions throughout an end and scores read from the scoreboard after the end is over
@@ -799,7 +855,7 @@ class EndResult:
         ret += "Red Score: {}, Yellow Score: {}\n".format(self.red_score,self.yel_score)
         if   self.red_hammer==1: ret += "Red has the hammer\n"
         elif self.red_hammer==0: ret += "Yellow has the hammer\n"
-        else              : ret += "Unknown who has the hammer...\n"
+        else:                    ret += "Unknown who has the hammer...\n"
         for entry in zip(self.stones_left, self.stone_layouts):
             ret+="Red left: {}, Yel left: {}\n  {}\n".format(entry[0][0], entry[0][1], entry[1])
         return ret
@@ -810,6 +866,23 @@ class EndResult:
         for entry in zip(self.stones_left, self.stone_layouts):
             print("Red left: {}, Yel left: {}\n  {}\n".format(entry[0][0], entry[0][1], entry[1]))
             entry[1].draw()
+
+    def __eq__(self,other):
+        if(self.end_num       == other.end_num and
+           self.red_score     == other.red_score and
+           self.yel_score     == other.yel_score and
+           self.stone_layouts == other.stone_layouts and
+           self.stones_left   == other.stones_left and
+           self.red_hammer    == other.red_hammer):
+            return True
+        else:
+            print('|-end_num:',      self.end_num       == other.end_num)
+            print('|-red_score:',    self.red_score     == other.red_score)
+            print('|-yel_score:',    self.yel_score     == other.yel_score)
+            print('|-stones_left:',  self.stones_left   == other.stones_left)
+            print('|-red_hammer',    self.red_hammer    == other.red_hammer)
+            return False
+
 
 # Basic container to hold game status data: current_end,current_score_red,current_score_yel,n_red_left,n_yel_left
 class ScoreboardState:

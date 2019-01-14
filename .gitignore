@@ -1,7 +1,10 @@
 
+.ipynb_checkpoints
 .ipynb_checkpoints/*-checkpoint.ipynb
 *.swp
-VideoLibrary/*.mp4
+data/VideoLibrary/*.mp4
 *.pyc
 *.bak/*
+*.bak
 *.back/*
+*.back

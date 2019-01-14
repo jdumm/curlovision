@@ -3,14 +3,17 @@ Curling computer vision project for extracting stone positions from broadcast ga
 
 ![Highlight Slide](curlovision_slide.png)
 
-# Dependencies
+# Requirements
 Curlovision is written in Python (tested with v3.6) taking advantage of the following dependencies:
 
   * OpenCV
-  * Matplotlib
   * Numpy
   * Pytesseract
+  * Jupyter
+  * Matplotlib
 
+There is a docker available with all required dependencies, available thanks to [zbassett](https://github.com/zbassett) at the following link:
+[https://github.com/zbassett/jupyterlab_opencv](https://github.com/zbassett/jupyterlab_opencv)
 
 # Usage
 
@@ -19,7 +22,7 @@ Main functions/classes can be imported from 'curlovision.py'.  Example files bel
 'ProcessBatch.ipynb' is an example for processing video broadcasts of curling matches.
   * Video files must be in mp4 format, 1 match per file.
   * Video assumed to have 15 fps with resolution 1920x1080.  Higher framerates can be processed efficiently with higher nskip values.
-  * Every 5th frame (default) is searched for the blue ice of the 12ft ring in the house.  When found, a ShortTermMemory starts collecting frames until the blue ice disappears.  Key frames are identified and processed, generally much faster than a video would play.  Hough Transforms are used to quickly find rings of the house and stones.  The scoreboard and games status are read and recorded using pytesseract and OpenCV template matching.  
+  * Every 5th frame (default) is searched for the blue ice of the 12ft ring in the house.  When found, a ShortTermMemory starts collecting frames until the blue ice disappears.  Key frames are identified and processed.  The whole process happens roughly 2x faster than video play time.  Hough Transforms are used to quickly find rings of the house and stones.  The scoreboard and games status are read and recorded using pytesseract and OpenCV template matching.  
   * The process_video function returns a custom MatchResult object that contains the results from each end of the match.  Each EndResult contains the stone positions in feet after each stone is thrown.  The number of stones remaining to be thrown by red and yellow teams are also recorded, along with the team that has the hammer (last stone in the end).
   * MatchResults know how to .draw() themselves.
 
